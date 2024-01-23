@@ -11,20 +11,20 @@ from queue import Queue
 queueOne = Queue()
 initPosPoppingOne = [0.0, -28.0, 5.0, 97.1, -10.1, -0.9, 35.2]
 finPosPoppingOne = [0, 15.6, 7.2, 142.9, -10.1, 10.1, 35.2]
-currPosOne = None
-currVelOne = None
-currTimeOne = None
+currPosOne = [0.0, -28.0, 5.0, 97.1, -10.1, -0.9, 35.2]
+currVelOne = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+currTimeOne = 0
 prevStatusOne = "back"
 counterOne = 0
 statusOne = False
 
 #arm 2
 queueTwo = Queue()
-initPosPoppingTwo = [0.0, 30.0, 0.0, 100.0, 0.3, 10.3, 0.0]
-finPosPoppingTwo = [0.0, 52.4, 0.0, 126.4, 0.3, 12.3, 0.0]
-currPosTwo = None
-currVelTwo = None
-currTimeTwo = None
+initPosPoppingTwo = [0.0, 30.0, 0.0, 90.0, 0.0, 50.0, 0.0]
+finPosPoppingTwo = [0.0, 60.0, 0.0, 130.0, 0.0, 0.0, 0.0]
+currPosTwo = [0.0, 30.0, 0.0, 90.0, 0.0, 50.0, 0.0]
+currVelTwo = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+currTimeTwo = 0
 prevStatusTwo = "back"
 counterTwo = 0
 statusTwo = False
@@ -88,9 +88,11 @@ def setup(strumD):
         angle = IPstring[i].copy()
         i += 1
         # angle[0] = angle[0]- strumD/2
+        print(angle)
         a.set_servo_angle(angle=angle, wait=True, speed=10, acceleration=0.25, is_radian=False)
 
 def pose_to_pose(initPos, finPos, vi, vf, t, armNum):
+    print(armNum)
     global queue
     with queue[armNum].mutex:
         queue[armNum].queue.clear()
@@ -115,8 +117,12 @@ def pose_to_pose(initPos, finPos, vi, vf, t, armNum):
         for j in range(7):
             posRow.append(posTrajs[j][i])
             velRow.append(velTrajs[j][i])
-        queue[armNum].put([reformatPos[-1], posRow, 0.004 + (i * 0.004), reformatVel[-1],
+        if finPos == finPosPopping[armNum]:
+            queue[armNum].put([reformatPos[-1], posRow, currTime[armNum] + ((i+1) * 0.004), reformatVel[-1],
                       velRow])  # each queue item has curr_pos, next_pos, next_time, curr_vel, next_vel for all joints
+        else:
+            queue[armNum].put([reformatPos[-1], posRow, currTime[armNum] - ((i + 1) * 0.004), reformatVel[-1],
+                               velRow])
         reformatPos.append(posRow)
         reformatVel.append(velRow)
 
@@ -149,7 +155,7 @@ def visionThread():
 
     while True:
         data, addr = sock.recvfrom(1024)
-        print(data.decode("utf-8"))
+        # print(data.decode("utf-8"))
         if ("noone" in data.decode("utf-8")):
             for i in range(len(arms)):
                 if prevStatus[i] == "back":
@@ -157,12 +163,10 @@ def visionThread():
                 else:
                     counter[i] = 0
                     prevStatus[i] = "back"
-                if counter[i] > 5:
+                if counter[i] > 5 and status[i]:
                     status[i] = False
-                    if currPos[i] != initPosPopping[i] and not(no_one_tracker):
-                        no_one_tracker = True
-                        print("arm" + str(i) + ") go back, no one detected")
-                        pose_to_pose(currPos[i], initPosPopping[i], currVel[i], 0, currTime[i], 0)
+                    print("arm" + str(i) + ") go back, no one detected")
+                    pose_to_pose(currPos[i], initPosPopping[i], currVel[i], 0, currTime[i], i)
         else:
             rec_arr = ast.literal_eval(data.decode("utf-8"))
             armOneDetect = False
@@ -171,55 +175,47 @@ def visionThread():
                 x_coord = float(rec_arr[i].split(",")[0])
                 if x_coord <= 330:
                     armOneDetect = True
-                    if prevStatusOne == "out":
-                        counterOne += 1
+                    if prevStatus[0] == "out":
+                        counter[0] += 1
                     else:
-                        counterOne = 0
-                        prevStatusOne = "out"
-                    if counterOne > 5:
-                        no_one_tracker = False
-                        if not(statusOne):
-                            statusOne = True
-                            print("arm1) out")
-                            pose_to_pose(currPosOne, finPosPoppingOne, currVelOne, 0, 5-currTimeOne, 0)
+                        counter[0] = 0
+                        prevStatus[0] = "out"
+                    if counter[0] > 5 and not(status[0]):
+                        status[0] = True
+                        print("arm1) out")
+                        pose_to_pose(currPos[0], finPosPopping[0], currVel[0], 0, 5-currTime[0], 0)
                 elif x_coord > 330:
                     armTwoDetect = True
-                    if prevStatusTwo == "out":
-                        counterTwo += 1
+                    if prevStatus[1] == "out":
+                        counter[1] += 1
                     else:
-                        counterTwo = 0
-                        prevStatusTwo = "out"
-                    if counterTwo > 5:
-                        no_one_tracker = False
-                        if not(statusTwo):
-                            statusTwo = True
-                            print("arm2) out")
-                            pose_to_pose(currPosTwo, finPosPoppingTwo, currVelTwo, 0, 5-currTimeTwo, 1)
+                        counter[1] = 0
+                        prevStatus[1] = "out"
+                    if counter[1] > 5 and not(status[1]):
+                        status[1] = True
+                        print("arm2) out")
+                        pose_to_pose(currPos[1], finPosPopping[1], currVel[1], 0, 5-currTime[1], 1)
 
             if not(armOneDetect):
-                if prevStatusOne == "back":
-                    counterOne += 1
+                if prevStatus[0] == "back":
+                    counter[0] += 1
                 else:
-                    counterOne = 0
-                    prevStatusOne = "back"
-                if counterOne > 5:
-                    statusOne = False
-                    if currPosOne != initPosPoppingOne and not (no_one_tracker):
-                        no_one_tracker = True
-                        print("arm2) go back, no one detected IN RANGE")
-                        pose_to_pose(currPosOne, initPosPoppingOne, currVelOne, 0, currTimeOne, 0)
+                    counter[0] = 0
+                    prevStatus[0] = "back"
+                if counter[0] > 5 and status[0]:
+                    status[0] = False
+                    print("arm1) go back, no one detected IN RANGE")
+                    pose_to_pose(currPos[0], initPosPopping[0], currVel[0], 0, currTime[0], 0)
             if not(armTwoDetect):
-                if prevStatusTwo == "back":
-                    counterTwo += 1
+                if prevStatus[1] == "back":
+                    counter[1] += 1
                 else:
-                    counterTwo = 0
-                    prevStatusTwo = "back"
-                if counterTwo > 5:
-                    statusTwo = False
-                    if currPosTwo != initPosPoppingTwo and not (no_one_tracker):
-                        no_one_tracker = True
-                        print("arm2) go back, no one detected IN RANGE")
-                        pose_to_pose(currPosTwo, initPosPoppingTwo, currVelTwo, 0, currTimeTwo, 1)
+                    counter[1] = 0
+                    prevStatus[1] = "back"
+                if counter[1] > 5 and status[1]:
+                    status[1] = False
+                    print("arm2) go back, no one detected IN RANGE")
+                    pose_to_pose(currPos[1], initPosPopping[1], currVel[1], 0, currTime[1], 1)
 
 def robotThread(armNum):
     while True:
@@ -230,6 +226,7 @@ def robotThread(armNum):
 
             next_time = info[2]
             next_vel = info[4]
+            print(str(armNum) + str(next_pos))
             arms[armNum].set_servo_angle_j(angles=next_pos, is_radian=False)
 
             currPos[armNum] = next_pos
@@ -253,7 +250,7 @@ if __name__ == '__main__':
     uamp = 30
     global IPstring
 
-    IP1 = [0.0, -30.0, 0.0, 125.0, 0.0, 11.0, -45.0]
+    IP1 = initPosPoppingOne
     IP2 = initPosPoppingTwo
     IPstring = [IP1, IP2]
 
@@ -274,14 +271,6 @@ if __name__ == '__main__':
         a.set_state(0)
     time.sleep(0.5)
 
-    currPos[0] = IPstring[0]
-    currVel[0] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    currTime[0] = 0
-
-    currPos[1] = IPstring[1]
-    currVel[1] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    currTime[1] = 0
-
     visionThread = Thread(target=visionThread)
     robotOneThread = Thread(target=robotThread, args=(0,))
     robotTwoThread = Thread(target=robotThread, args=(1,))
@@ -289,8 +278,6 @@ if __name__ == '__main__':
     robotOneThread.start()
     robotTwoThread.start()
 
-    pose_to_pose(IPstring[0], initPosPopping[0], currVel[0], 0, 2, 0)
-    time.sleep(3)
     while True:
         input(".")
 
