@@ -7,6 +7,8 @@ from threading import Thread
 from queue import Queue
 
 # global vars
+time_to_move = 3
+
 #arm 1
 queueOne = Queue()
 initPosPoppingOne = [0.0, -28.0, 5.0, 97.1, -10.1, -0.9, 35.2]
@@ -183,7 +185,7 @@ def visionThread():
                     if counter[0] > 5 and not(status[0]):
                         status[0] = True
                         print("arm1) out")
-                        pose_to_pose(currPos[0], finPosPopping[0], currVel[0], 0, 5-currTime[0], 0)
+                        pose_to_pose(currPos[0], finPosPopping[0], currVel[0], 0, time_to_move-currTime[0], 0)
                 elif x_coord > 330:
                     armTwoDetect = True
                     if prevStatus[1] == "out":
@@ -194,7 +196,7 @@ def visionThread():
                     if counter[1] > 5 and not(status[1]):
                         status[1] = True
                         print("arm2) out")
-                        pose_to_pose(currPos[1], finPosPopping[1], currVel[1], 0, 5-currTime[1], 1)
+                        pose_to_pose(currPos[1], finPosPopping[1], currVel[1], 0, time_to_move-currTime[1], 1)
 
             if not(armOneDetect):
                 if prevStatus[0] == "back":
@@ -217,21 +219,40 @@ def visionThread():
                     print("arm2) go back, no one detected IN RANGE")
                     pose_to_pose(currPos[1], initPosPopping[1], currVel[1], 0, currTime[1], 1)
 
-def robotThread(armNum):
+def robotThread():
     while True:
-        if not(queue[armNum].empty()):
-            info = queue[armNum].get()
+        if not(queue[0].empty()):
+            info = queue[0].get()
 
             next_pos = [round(info[1][0], 1), round(info[1][1], 1), round(info[1][2], 1), round(info[1][3], 1), round(info[1][4], 1), round(info[1][5], 1), round(info[1][6], 1)]
+            # next_time = info[2]
+            # next_vel = info[4]
+            print(str(0) + str(next_pos))
+            arms[0].set_servo_angle_j(angles=next_pos, is_radian=False)
 
-            next_time = info[2]
-            next_vel = info[4]
-            print(str(armNum) + str(next_pos))
-            arms[armNum].set_servo_angle_j(angles=next_pos, is_radian=False)
+            currPos[0] = next_pos
+            currTime[0] = info[2]
+            currVel[0] = info[4]
 
-            currPos[armNum] = next_pos
-            currTime[armNum] = next_time
-            currVel[armNum] = next_vel
+            start_time = time.time()
+            tts = time.time() - start_time
+
+            while tts < 0.004:
+                tts = time.time() - start_time
+                time.sleep(0.0001)
+
+        if not(queue[1].empty()):
+            info = queue[1].get()
+
+            next_pos = [round(info[1][0], 1), round(info[1][1], 1), round(info[1][2], 1), round(info[1][3], 1), round(info[1][4], 1), round(info[1][5], 1), round(info[1][6], 1)]
+            # next_time = info[2]
+            # next_vel = info[4]
+            print(str(1) + str(next_pos))
+            arms[1].set_servo_angle_j(angles=next_pos, is_radian=False)
+
+            currPos[1] = next_pos
+            currTime[1] = info[2]
+            currVel[1] = info[4]
 
             start_time = time.time()
             tts = time.time() - start_time
@@ -272,11 +293,11 @@ if __name__ == '__main__':
     time.sleep(0.5)
 
     visionThread = Thread(target=visionThread)
-    robotOneThread = Thread(target=robotThread, args=(0,))
-    robotTwoThread = Thread(target=robotThread, args=(1,))
+    robotThread = Thread(target=robotThread)
+    # robotTwoThread = Thread(target=robotThread, args=(1,))
     visionThread.start()
-    robotOneThread.start()
-    robotTwoThread.start()
+    robotThread.start()
+    # robotTwoThread.start()
 
     while True:
         input(".")
