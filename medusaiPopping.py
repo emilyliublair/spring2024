@@ -5,82 +5,146 @@ from xarm.wrapper import XArmAPI
 import socket
 from threading import Thread
 from queue import Queue
+import random
 
 # global vars
 time_to_move = 3
-counter_threshold = 3
+counter_threshold = 2
+rand_t_low = 4
+rand_t_high = 7
+rand_amp_low = 7
+rand_amp_high = 12
 
-amp = 10
-iteration_t = 5
-traj_t = np.arange(0, 10, 0.004)
+def snaking(rand_t):
+    amp_r = random.randint(rand_amp_low, rand_amp_high)
+    offset_r = 1
+    iteration_t_r = rand_t
+    traj_t_r = np.arange(0, (2 * iteration_t_r), 0.004)
+    traj_t_r_four = np.arange(offset_r, (2 * iteration_t_r) + offset_r, 0.004)
+    print(amp_r)
 
-#snaking pos
-two_in_p = amp * np.sin((np.pi / iteration_t) * traj_t)
-four_in_p = amp * np.sin((np.pi / iteration_t) * traj_t)
-six_in_p = amp * np.sin((np.pi / iteration_t) * traj_t)
+    two_p_r = amp_r * np.sin((np.pi / iteration_t_r) * traj_t_r)
+    four_p_r = amp_r * np.sin((np.pi / iteration_t_r) * traj_t_r)
+    six_p_r = amp_r * np.sin((np.pi / iteration_t_r) * traj_t_r)
 
-two_out_p = amp * np.sin((np.pi / iteration_t) * traj_t)
-four_out_p = amp * np.sin((np.pi / iteration_t) * traj_t)
-six_out_p = amp * np.sin((np.pi / iteration_t) * traj_t)
-
-#snaking vel
-two_in_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-four_in_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-six_in_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-
-two_out_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-four_out_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-six_out_v = amp * (np.pi / iteration_t) * np.cos((np.pi / iteration_t) * traj_t)
-
+    # snaking vel
+    two_v_r = amp_r * (np.pi / iteration_t_r) * np.cos((np.pi / iteration_t_r) * traj_t_r)
+    four_v_r = amp_r * (np.pi / iteration_t_r) * np.cos((np.pi / iteration_t_r) * traj_t_r)
+    six_v_r = amp_r * (np.pi / iteration_t_r) * np.cos((np.pi / iteration_t_r) * traj_t_r)
+    return [two_p_r, four_p_r, six_p_r, two_v_r, four_v_r, six_v_r]
 
 #arm 1
 queueOne = Queue()
-initPosPoppingOne = [0.0, -28.0, 5.0, 97.1, -10.1, -0.9, 35.2]
+initPosPoppingOne = [0.0, -42.0, 5.0, 71.2, -10.1, 58.4, 35.2]
 finPosPoppingOne = [0, 15.6, 7.2, 142.9, -10.1, 10.1, 35.2]
-currPosOne = [0.0, -28.0, 5.0, 97.1, -10.1, -0.9, 35.2]
+currPosOne = initPosPoppingOne
 currVelOne = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 currTimeOne = 0
 prevStatusOne = "back"
 counterOne = 0
 statusOne = False
 snaking_tracker_one = 0
+rand_t_one = random.randint(rand_t_low, rand_t_high)
+mod_one = int((2 * rand_t_one)/.004)
+snaking_one = snaking(rand_t_one)
 
 #arm 2
 queueTwo = Queue()
 initPosPoppingTwo = [0.0, 30.0, 0.0, 90.0, 0.0, 50.0, 0.0]
 finPosPoppingTwo = [0.0, 60.0, 0.0, 130.0, 0.0, 0.0, 0.0]
-currPosTwo = [0.0, 30.0, 0.0, 90.0, 0.0, 50.0, 0.0]
+currPosTwo = initPosPoppingTwo
 currVelTwo = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 currTimeTwo = 0
 prevStatusTwo = "back"
 counterTwo = 0
 statusTwo = False
 snaking_tracker_two = 0
+rand_t_two = random.randint(rand_t_low, rand_t_high)
+mod_two = int((2 * rand_t_two)/.004)
+snaking_two = snaking(rand_t_two)
 
 #arm 3
 queueThree = Queue()
-initPosPoppingThree = [124.1, 3.7, 8.7, 118.4, -13.9, 30.7, 0.0]
-finPosPoppingThree = [124.1, 31.1, 8.7, 102.0, -13.9, -31.0, 0.0]
-currPosThree = [124.1, 3.7, 8.7, 118.4, -13.9, 30.7, 0.0]
+initPosPoppingThree = [109.7, 24.6, 10.0, 74.2, -13.9, 57.0, 0.0]
+finPosPoppingThree = [109.7, 65.1, 10.0, 126.5, 13.1, -25.8, 0.0]
+currPosThree = initPosPoppingThree
 currVelThree = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 currTimeThree = 0
 prevStatusThree = "back"
 counterThree = 0
 statusThree = False
 snaking_tracker_three = 0
+rand_t_three = random.randint(rand_t_low, rand_t_high)
+mod_three = int((2 * rand_t_three) / .004)
+snaking_three = snaking(rand_t_three)
 
-queue = [queueOne, queueTwo, queueThree]
-initPosPopping = [initPosPoppingOne, initPosPoppingTwo, initPosPoppingThree]
-finPosPopping = [finPosPoppingOne, finPosPoppingTwo, finPosPoppingThree]
-currPos = [currPosOne, currPosTwo, currPosThree]
-currVel = [currVelOne, currVelTwo, currVelThree]
-currTime = [currTimeOne, currTimeTwo, currTimeThree]
-prevStatus = [prevStatusOne, prevStatusTwo, prevStatusThree]
-counter = [counterOne, counterTwo, counterThree]
-status = [statusOne, statusTwo, statusThree]
-snaking_tracker = [snaking_tracker_one, snaking_tracker_two, snaking_tracker_three]
+#arm 4
+queueFour = Queue()
+initPosPoppingFour = [12.5, -1.2, 0.0, 51.6, 0.0, 68.0, 0.0]
+finPosPoppingFour = [12.5, 58.2, 0.0, 107.1, 0.0, -31.5, 0.0]
+currPosFour = initPosPoppingFour
+currVelFour = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+currTimeFour = 0
+prevStatusFour = "back"
+counterFour = 0
+statusFour= False
+snaking_tracker_four = 0
+rand_t_four = random.randint(rand_t_low, rand_t_high)
+mod_four = int((2 * rand_t_four) / .004)
+snaking_four = snaking(rand_t_four)
+
+queue = [queueOne, queueTwo, queueThree, queueFour]
+initPosPopping = [initPosPoppingOne, initPosPoppingTwo, initPosPoppingThree, initPosPoppingFour]
+finPosPopping = [finPosPoppingOne, finPosPoppingTwo, finPosPoppingThree, finPosPoppingFour]
+currPos = [currPosOne, currPosTwo, currPosThree, currPosFour]
+currVel = [currVelOne, currVelTwo, currVelThree, currVelFour]
+currTime = [currTimeOne, currTimeTwo, currTimeThree, currTimeFour]
+prevStatus = [prevStatusOne, prevStatusTwo, prevStatusThree, prevStatusFour]
+counter = [counterOne, counterTwo, counterThree, counterFour]
+status = [statusOne, statusTwo, statusThree, statusFour]
+snaking_tracker = [snaking_tracker_one, snaking_tracker_two, snaking_tracker_three, snaking_tracker_four]
+snakings = [snaking_one, snaking_two, snaking_three, snaking_four]
+mods = [mod_one, mod_two, mod_three, mod_four]
+
+# queue = [queueOne]
+# initPosPopping = [initPosPoppingOne]
+# finPosPopping = [finPosPoppingOne]
+# currPos = [currPosOne]
+# currVel = [currVelOne]
+# currTime = [currTimeOne]
+# prevStatus = [prevStatusOne]
+# counter = [counterOne]
+# status = [statusOne]
+# snaking_tracker = [snaking_tracker_one]
 
 no_one_tracker = True
+slope = -0.38
+intercept = 331
+overlap_1_2 = 20
+
+def zone_1(x, y, x_vel, y_vel):
+    line_y = slope * x + (intercept + overlap_1_2)
+    dt = time_to_move - currTime[3]
+    inzone = x < 250 and y < line_y
+    willbeinzone = (x + x_vel * dt) < 250 and (y + y_vel * dt) < line_y
+    return inzone or willbeinzone
+def zone_2(x, y, x_vel, y_vel):
+    line_y = slope * x + (intercept - overlap_1_2)
+    dt = time_to_move - currTime[0]
+    inzone = x < 300 and y > line_y
+    willbeinzone = (x + x_vel * dt) < 300 and (y + y_vel * dt) > line_y
+    return inzone or willbeinzone
+
+def zone_3(x, y, x_vel, y_vel):
+    dt = time_to_move-currTime[2]
+    inzone = (275 <= x <= 440)
+    willbeinzone = (275 <= (x + x_vel * dt) <= 440)
+    return inzone or willbeinzone
+def zone_4(x, y, x_vel, y_vel):
+    dt = time_to_move - currTime[1]
+    inzone = x > 400
+    willbeinzone = (x + x_vel * dt) > 400
+    return inzone or willbeinzone
 
 def strumbot(traj):
     # j_angles = pos
@@ -175,26 +239,6 @@ def pose_to_pose(initPos, finPos, vi, vf, t, armNum):
             reformatPos.append(posRow)
             reformatVel.append(velRow)
 
-def motifRecognizer(name,*args):
-    print("got")
-    receivedm = np.array(list(args))
-    print(receivedm)
-
-def distance_point_to_line_segment(point, segment_start, segment_end):
-    point = np.array(point)
-    segment_start = np.array(segment_start)
-    segment_end = np.array(segment_end)
-
-    segment_vector = segment_end - segment_start
-    point_vector = point - segment_start
-
-    t = np.dot(point_vector, segment_vector) / np.dot(segment_vector, segment_vector)
-    t = max(0, min(1, t))
-    closest_point = segment_start + t * segment_vector
-    distance = np.linalg.norm(point - closest_point)
-
-    return distance
-
 def visionThread():
     global no_one_tracker
     global arms
@@ -218,13 +262,26 @@ def visionThread():
                     pose_to_pose(currPos[i], initPosPopping[i], currVel[i], 0, currTime[i], i)
         else:
             rec_arr = ast.literal_eval(data.decode("utf-8"))
-            armOneDetect = False
-            armTwoDetect = False
-            armThreeDetect = False
+            armDetect = [False, False, False, False]
+            # armOneDetect = False
+            # armTwoDetect = False
+            # armThreeDetect = False
+            # armFourDetect = False
+            # print(data.decode("utf-8"))
+            print(rec_arr)
             for i in range(len(rec_arr)):
-                x_coord = float(rec_arr[i].split(",")[0])
-                if x_coord < 260:
-                    armOneDetect = True
+                coordinates = rec_arr[i].split("/")[0].split(",")
+                vel = rec_arr[i].split("/")[1].split(",")
+                x_coord = float(coordinates[0])
+                y_coord = float(coordinates[1])
+                x_vel = float(vel[0])
+                y_vel = float(vel[1])
+                print(x_coord)
+                print(y_coord)
+                print(x_vel)
+                print(y_vel)
+                if zone_2(x_coord, y_coord, x_vel, y_vel):
+                    armDetect[0] = True
                     if prevStatus[0] == "out":
                         counter[0] += 1
                     else:
@@ -234,8 +291,19 @@ def visionThread():
                         status[0] = True
                         print("arm1) out")
                         pose_to_pose(currPos[0], finPosPopping[0], currVel[0], 0, time_to_move-currTime[0], 0)
-                if x_coord > 380:
-                    armTwoDetect = True
+                if zone_1(x_coord, y_coord, x_vel, y_vel):
+                    armDetect[3] = True
+                    if prevStatus[3] == "out":
+                        counter[3] += 1
+                    else:
+                        counter[3] = 0
+                        prevStatus[3] = "out"
+                    if counter[3] > counter_threshold and not(status[3]):
+                        status[3] = True
+                        print("arm4) out")
+                        pose_to_pose(currPos[3], finPosPopping[3], currVel[3], 0, time_to_move - currTime[3], 3)
+                if zone_4(x_coord, y_coord, x_vel, y_vel):
+                    armDetect[1] = True
                     if prevStatus[1] == "out":
                         counter[1] += 1
                     else:
@@ -245,8 +313,8 @@ def visionThread():
                         status[1] = True
                         print("arm2) out")
                         pose_to_pose(currPos[1], finPosPopping[1], currVel[1], 0, time_to_move-currTime[1], 1)
-                if 210 <= x_coord <= 440:
-                    armThreeDetect = True
+                if zone_3(x_coord, y_coord, x_vel, y_vel):
+                    armDetect[2] = True
                     if prevStatus[2] == "out":
                         counter[2] += 1
                     else:
@@ -256,46 +324,27 @@ def visionThread():
                         status[2] = True
                         print("arm3) out")
                         pose_to_pose(currPos[2], finPosPopping[2], currVel[2], 0, time_to_move-currTime[2], 2)
-            if not(armOneDetect):
-                if prevStatus[0] == "back":
-                    counter[0] += 1
-                else:
-                    counter[0] = 0
-                    prevStatus[0] = "back"
-                if counter[0] > counter_threshold and status[0]:
-                    status[0] = False
-                    print("arm1) go back, no one detected IN RANGE")
-                    pose_to_pose(currPos[0], initPosPopping[0], currVel[0], 0, currTime[0], 0)
-            if not(armTwoDetect):
-                if prevStatus[1] == "back":
-                    counter[1] += 1
-                else:
-                    counter[1] = 0
-                    prevStatus[1] = "back"
-                if counter[1] > counter_threshold and status[1]:
-                    status[1] = False
-                    print("arm2) go back, no one detected IN RANGE")
-                    pose_to_pose(currPos[1], initPosPopping[1], currVel[1], 0, currTime[1], 1)
-            if not(armThreeDetect):
-                if prevStatus[2] == "back":
-                    counter[2] += 1
-                else:
-                    counter[2] = 0
-                    prevStatus[2] = "back"
-                if counter[2] > counter_threshold and status[2]:
-                    status[2] = False
-                    print("arm3) go back, no one detected IN RANGE")
-                    pose_to_pose(currPos[2], initPosPopping[2], currVel[2], 0, currTime[2], 2)
-
+            for i in range(len(armDetect)):
+                if not(armDetect[i]):
+                    if prevStatus[i] == "back":
+                        counter[i] += 1
+                    else:
+                        counter[i] = 0
+                        prevStatus[i] = "back"
+                    if counter[i] > counter_threshold and status[i]:
+                        status[i] = False
+                        print("arm"+str(i)+") go back, no one detected IN RANGE")
+                        pose_to_pose(currPos[i], initPosPopping[i], currVel[i], 0, currTime[i], i)
 def robotThread():
     global snaking_tracker_one
     global snaking_tracker_two
     global snaking_tracker_three
+    global snaking_tracker_four
 
     while True:
         start_time = time.time()
         tts = time.time() - start_time
-        for i in range(len(queue)):
+        for i in range(len(arms)):
             if not(queue[i].empty()):
                 snaking_tracker[i] = 0
                 info = queue[i].get()
@@ -309,80 +358,23 @@ def robotThread():
             else:
                 if (status[i]):
                     next_pos = arms[i].angles
-                    next_pos[1] = two_out_p[snaking_tracker[i] % 2500] + finPosPopping[i][1]
-                    next_pos[3] = two_out_p[snaking_tracker[i] % 2500] + finPosPopping[i][3]
-                    next_pos[5] = two_out_p[snaking_tracker[i] % 2500] + finPosPopping[i][5]
-                    currVel[i] = [0.0, two_out_v[snaking_tracker[i] % 2500], 0.0,
-                                  four_out_v[snaking_tracker[i] % 2500], 0.0, six_out_v[snaking_tracker[i] % 2500],
+                    next_pos[1] = snakings[i][0][snaking_tracker[i] % mods[i]] + finPosPopping[i][1]
+                    next_pos[3] = snakings[i][1][snaking_tracker[i] % mods[i]] + finPosPopping[i][3]
+                    next_pos[5] = snakings[i][2][snaking_tracker[i] % mods[i]] + finPosPopping[i][5]
+                    currVel[i] = [0.0, snakings[i][3][snaking_tracker[i] % mods[i]], 0.0,
+                                  snakings[i][4][snaking_tracker[i] % mods[i]], 0.0, snakings[i][5][snaking_tracker[i] % mods[i]],
                                   0.0]
                 else:
                     next_pos = arms[i].angles
-                    next_pos[1] = two_in_p[snaking_tracker[i] % 2500] + initPosPopping[i][1]
-                    next_pos[3] = four_in_p[snaking_tracker[i] % 2500] + initPosPopping[i][3]
-                    next_pos[5] = six_in_p[snaking_tracker[i] % 2500] + initPosPopping[i][5]
-                    currVel[i] = [0.0, two_in_v[snaking_tracker[i] % 2500], 0.0, four_in_v[snaking_tracker[i] % 2500],
-                                  0.0, six_in_v[snaking_tracker[i] % 2500], 0.0]
+                    next_pos[1] = snakings[i][0][snaking_tracker[i] % mods[i]] + initPosPopping[i][1]
+                    next_pos[3] = snakings[i][1][snaking_tracker[i] % mods[i]] + initPosPopping[i][3]
+                    next_pos[5] = snakings[i][2][snaking_tracker[i] % mods[i]] + initPosPopping[i][5]
+                    currVel[i] = [0.0, snakings[i][3][snaking_tracker[i] % mods[i]], 0.0, snakings[i][4][snaking_tracker[i] % mods[i]],
+                                  0.0, snakings[i][5][snaking_tracker[i] % mods[i]], 0.0]
 
                 arms[i].set_servo_angle_j(angles=next_pos, is_radian=False)
                 currPos[i] = next_pos
                 snaking_tracker[i] += 1
-
-        # if not(queue[0].empty()):
-        #     snaking_tracker_one = 0
-        #     info = queue[0].get()
-        #
-        #     next_pos = [round(info[1][0], 1), round(info[1][1], 1), round(info[1][2], 1), round(info[1][3], 1), round(info[1][4], 1), round(info[1][5], 1), round(info[1][6], 1)]
-        #     # next_time = info[2]
-        #     # next_vel = info[4]
-        #     print(str(0) + str(next_pos))
-        #     arms[0].set_servo_angle_j(angles=next_pos, is_radian=False)
-        #
-        #     currPos[0] = next_pos
-        #     currTime[0] = info[2]
-        #     currVel[0] = info[4]
-        # else:
-        #     if (status[0]):
-        #         next_pos = arms[0].angles
-        #         next_pos[1] = two_out_p[snaking_tracker_one%2500] + finPosPopping[0][1]
-        #         next_pos[3] = two_out_p[snaking_tracker_one % 2500] + finPosPopping[0][3]
-        #         next_pos[5] = two_out_p[snaking_tracker_one % 2500] + finPosPopping[0][5]
-        #         currVel[0] = [0.0, two_out_v[snaking_tracker_one % 2500], 0.0, four_out_v[snaking_tracker_one % 2500], 0.0, six_out_v[snaking_tracker_one % 2500], 0.0]
-        #     else:
-        #         next_pos = arms[0].angles
-        #         next_pos[1] = two_in_p[snaking_tracker_one % 2500] + initPosPopping[0][1]
-        #         next_pos[3] = four_in_p[snaking_tracker_one % 2500] + initPosPopping[0][3]
-        #         next_pos[5] = six_in_p[snaking_tracker_one % 2500] + initPosPopping[0][5]
-        #         currVel[0] = [0.0, two_in_v[snaking_tracker_one % 2500], 0.0, four_in_v[snaking_tracker_one % 2500], 0.0, six_in_v[snaking_tracker_one % 2500], 0.0]
-        #
-        #     arms[0].set_servo_angle_j(angles=next_pos, is_radian=False)
-        #     currPos[0] = next_pos
-        #     snaking_tracker_one += 1
-        #
-        # if not(queue[1].empty()):
-        #     snaking_tracker_two = 0
-        #     info = queue[1].get()
-        #
-        #     next_pos = [round(info[1][0], 1), round(info[1][1], 1), round(info[1][2], 1), round(info[1][3], 1), round(info[1][4], 1), round(info[1][5], 1), round(info[1][6], 1)]
-        #
-        #     print(str(1) + str(next_pos))
-        #     arms[1].set_servo_angle_j(angles=next_pos, is_radian=False)
-        #
-        #     currPos[1] = next_pos
-        #     currTime[1] = info[2]
-        #     currVel[1] = info[4]
-        #
-        # if not(queue[2].empty()):
-        #     snaking_tracker_three = 0
-        #     info = queue[2].get()
-        #
-        #     next_pos = [round(info[1][0], 1), round(info[1][1], 1), round(info[1][2], 1), round(info[1][3], 1), round(info[1][4], 1), round(info[1][5], 1), round(info[1][6], 1)]
-        #
-        #     print(str(2) + str(next_pos))
-        #     arms[2].set_servo_angle_j(angles=next_pos, is_radian=False)
-        #
-        #     currPos[2] = next_pos
-        #     currTime[2] = info[2]
-        #     currVel[2] = info[4]
 
         while tts < 0.004:
             tts = time.time() - start_time
@@ -401,18 +393,21 @@ if __name__ == '__main__':
     IP0 = initPosPoppingOne
     IP1 = initPosPoppingTwo
     IP2 = initPosPoppingThree
-    IPstring = [IP0, IP1, IP2]
+    IP3 = initPosPoppingFour
+    IPstring = [IP0, IP1, IP2, IP3]
 
     UDP_IP = "0.0.0.0"
-    UDP_PORT = 5005
+    UDP_PORT = 5006
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind((UDP_IP, UDP_PORT))
 
-    arm1 = XArmAPI('192.168.1.237') # left front
-    arm2 = XArmAPI('192.168.1.204') # right front
-    arm3 = XArmAPI('192.168.1.244') # middle front
+    arm1 = XArmAPI('192.168.1.237') # middle left
+    arm2 = XArmAPI('192.168.1.204') # far right
+    arm3 = XArmAPI('192.168.1.244') # middle right
+    arm4 = XArmAPI('192.168.1.236')  # far left
     global arms
-    arms = [arm1, arm2, arm3]
+    arms = [arm1, arm2, arm3, arm4]
+    # arms = [arm1]
 
     setup(2)
     input("press enter when robots stop moving")
@@ -428,6 +423,7 @@ if __name__ == '__main__':
 
     while True:
         input(".")
+
 
 
     #we want interrupt to happen at time x
